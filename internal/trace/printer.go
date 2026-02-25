@@ -513,22 +513,31 @@ func wrapText(text string, maxW int) string {
 	if maxW < 20 {
 		maxW = 20
 	}
-	if utf8.RuneCountInString(text) <= maxW {
+	runes := []rune(text)
+	if len(runes) <= maxW {
 		return text
 	}
 	var lines []string
-	for len(text) > 0 {
-		if utf8.RuneCountInString(text) <= maxW {
-			lines = append(lines, text)
+	for len(runes) > 0 {
+		if len(runes) <= maxW {
+			lines = append(lines, string(runes))
 			break
 		}
 		cut := maxW
-		// try to break at a space
-		if idx := strings.LastIndex(text[:cut], " "); idx > 0 {
-			cut = idx
+		// try to break at a space (working on runes, not bytes)
+		for i := cut - 1; i >= 0; i-- {
+			if runes[i] == ' ' {
+				cut = i
+				break
+			}
 		}
-		lines = append(lines, text[:cut])
-		text = strings.TrimLeft(text[cut:], " ")
+		lines = append(lines, string(runes[:cut]))
+		// advance past any leading spaces in the remaining runes
+		next := cut
+		for next < len(runes) && runes[next] == ' ' {
+			next++
+		}
+		runes = runes[next:]
 	}
 	return strings.Join(lines, "\n")
 }
