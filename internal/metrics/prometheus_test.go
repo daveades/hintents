@@ -34,8 +34,7 @@ func TestRecordRemoteNodeResponse_Success(t *testing.T) {
 	assert.Greater(t, timestamp, float64(time.Now().Unix()-5)) // Within last 5 seconds
 
 	// Verify histogram recorded
-	histogram := RemoteNodeResponseDurationSeconds.WithLabelValues(nodeAddress, network)
-	assert.Equal(t, uint64(1), testutil.CollectAndCount(histogram))
+	assert.Equal(t, 1, testutil.CollectAndCount(RemoteNodeResponseDurationSeconds))
 }
 
 func TestRecordRemoteNodeResponse_Error(t *testing.T) {
@@ -64,8 +63,7 @@ func TestRecordRemoteNodeResponse_Error(t *testing.T) {
 	assert.Equal(t, float64(beforeTimestamp), timestamp)
 
 	// Verify histogram still recorded (even for errors)
-	histogram := RemoteNodeResponseDurationSeconds.WithLabelValues(nodeAddress, network)
-	assert.Equal(t, uint64(1), testutil.CollectAndCount(histogram))
+	assert.Equal(t, 1, testutil.CollectAndCount(RemoteNodeResponseDurationSeconds))
 }
 
 func TestRecordRemoteNodeResponse_MultipleNodes(t *testing.T) {

@@ -150,7 +150,7 @@ impl SourceMapCache {
         let lock_path = Self::get_lock_path(cache_path);
         File::options()
             .create(true)
-            .truncate(false)
+            .truncate(true)
             .read(true)
             .write(true)
             .open(&lock_path)
@@ -351,7 +351,7 @@ impl SourceMapCache {
     }
 
     /// Returns the cache directory path
-    pub fn get_cache_dir(&self) -> &PathBuf {
+    pub fn get_cache_dir(&self) -> &Path {
         &self.cache_dir
     }
 }

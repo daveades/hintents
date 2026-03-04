@@ -69,11 +69,11 @@ Examples:
 		if cmpLocalWasmFlag == "" {
 			return errors.WrapValidationError("--wasm flag is required for compare mode")
 		}
-		if _, err := os.Stat(cmpLocalWasmFlag); os.IsNotExist(err) {
+		if _, statErr := os.Stat(cmpLocalWasmFlag); os.IsNotExist(statErr) {
 			return errors.WrapValidationError(fmt.Sprintf("WASM file not found: %s", cmpLocalWasmFlag))
 		}
-		if err := rpc.ValidateTransactionHash(args[0]); err != nil {
-			return errors.WrapValidationError(fmt.Sprintf("invalid transaction hash: %v", err))
+		if validateErr := rpc.ValidateTransactionHash(args[0]); validateErr != nil {
+			return errors.WrapValidationError(fmt.Sprintf("invalid transaction hash: %v", validateErr))
 		}
 		switch rpc.Network(cmpNetworkFlag) {
 		case rpc.Testnet, rpc.Mainnet, rpc.Futurenet:
@@ -155,7 +155,7 @@ func runCompare(cmd *cobra.Command, cmdArgs []string) error {
 		token = os.Getenv("ERST_RPC_TOKEN")
 	}
 	if token == "" {
-		if cfg, err := config.Load(); err == nil && cfg.RPCToken != "" {
+		if cfg, cfgErr := config.Load(); cfgErr == nil && cfg.RPCToken != "" {
 			token = cfg.RPCToken
 		}
 	}
@@ -168,7 +168,7 @@ func runCompare(cmd *cobra.Command, cmdArgs []string) error {
 		urls := splitTrimmed(cmpRPCURLFlag)
 		clientOpts = append(clientOpts, rpc.WithAltURLs(urls))
 	} else {
-		if cfg, err := config.Load(); err == nil {
+		if cfg, cfgErr := config.Load(); cfgErr == nil {
 			if len(cfg.RpcUrls) > 0 {
 				clientOpts = append(clientOpts, rpc.WithAltURLs(cfg.RpcUrls))
 			} else if cfg.RpcUrl != "" {
@@ -290,7 +290,7 @@ func buildSimRequest(
 		req.MockArgs = &mockArgs
 	}
 	if cmpProtoFlag > 0 {
-		if err := simulator.Validate(cmpProtoFlag); err == nil {
+		if validateErr := simulator.Validate(cmpProtoFlag); validateErr == nil {
 			req.ProtocolVersion = &cmpProtoFlag
 		}
 	}

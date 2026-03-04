@@ -100,8 +100,7 @@ func extractNativeXLMPayments(envelopeXdrB64 string) ([]Transfer, error) {
 	}
 
 	var env xdr.TransactionEnvelope
-	err = xdr.SafeUnmarshal(envBytes, &env)
-	if err != nil {
+	if err = xdr.SafeUnmarshal(envBytes, &env); err != nil {
 		return nil, fmt.Errorf("unmarshal TransactionEnvelope: %w", err)
 	}
 
@@ -131,7 +130,7 @@ func extractNativeXLMPayments(envelopeXdrB64 string) ([]Transfer, error) {
 	for _, op := range tx.Operations {
 		opSource := source
 		if op.SourceAccount != nil {
-			if s, err := muxedAccountToAddress(*op.SourceAccount); err == nil {
+			if s, srcErr := muxedAccountToAddress(*op.SourceAccount); srcErr == nil {
 				opSource = s
 			}
 		}
@@ -170,8 +169,7 @@ func extractSACTransfersAndMints(resultMetaXdrB64 string) ([]Transfer, error) {
 	}
 
 	var rm xdr.TransactionResultMeta
-	err = xdr.SafeUnmarshal(metaBytes, &rm)
-	if err != nil {
+	if err = xdr.SafeUnmarshal(metaBytes, &rm); err != nil {
 		return nil, fmt.Errorf("unmarshal TransactionResultMeta: %w", err)
 	}
 

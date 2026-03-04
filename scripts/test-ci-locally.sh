@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) Hintents Authors.
+# Copyright 2025 Erst Users
 # SPDX-License-Identifier: Apache-2.0
 
 # Test CI checks locally before pushing
@@ -28,11 +28,14 @@ echo "[OK] Go files are properly formatted"
 echo "Go: Running go vet..."
 go vet ./...
 
-echo "Go: Running tests..."
-go test -v -race ./...
-
 echo "Go: Building..."
 go build -v ./...
+
+echo "Go: Building erst binary for integration tests..."
+go build -o erst ./cmd/erst
+
+echo "Go: Running tests..."
+go test -v -race ./...
 
 # Rust checks
 echo ""

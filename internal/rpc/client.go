@@ -162,11 +162,6 @@ func (e *AllNodesFailedError) Error() string {
 	return fmt.Sprintf("all RPC endpoints failed: [%s]", strings.Join(reasons, ", "))
 }
 
-// Is allows errors.Is to match AllNodesFailedError against the ErrAllRPCFailed sentinel.
-func (e *AllNodesFailedError) Is(target error) bool {
-	return target == errors.ErrAllRPCFailed
-}
-
 // Unwrap returns all per-node errors so errors.Is and errors.As can traverse them.
 func (e *AllNodesFailedError) Unwrap() []error {
 	errs := make([]error, len(e.Failures))
@@ -446,7 +441,6 @@ func (c *Client) GetTransaction(ctx context.Context, hash string) (*TransactionR
 }
 
 func (c *Client) getTransactionAttempt(ctx context.Context, hash string) (txResp *TransactionResponse, err error) {
-	startTime := time.Now()
 	timer := c.startMethodTimer(ctx, "rpc.get_transaction", map[string]string{
 		"network": c.GetNetworkName(),
 		"rpc_url": c.HorizonURL,
@@ -465,6 +459,8 @@ func (c *Client) getTransactionAttempt(ctx context.Context, hash string) (txResp
 	defer span.End()
 
 	logger.Logger.Debug("Fetching transaction details", "hash", hash, "url", c.HorizonURL)
+
+	startTime := time.Now()
 
 	// Fail fast if circuit breaker is open for this Horizon endpoint.
 	if !c.isHealthy(c.HorizonURL) {
@@ -649,24 +645,16 @@ func (c *Client) handleLedgerError(err error, sequence uint32) error {
 		switch hErr.Problem.Status {
 		case 404:
 			logger.Logger.Warn("Ledger not found", "sequence", sequence, "status", 404)
-			return &errors.LedgerNotFoundError{
-				Sequence: sequence,
-				Message:  fmt.Sprintf("ledger %d not found", sequence),
-			}
+			return errors.WrapLedgerNotFound(sequence)
 		case 410:
 			logger.Logger.Warn("Ledger archived", "sequence", sequence, "status", 410)
-			return &errors.LedgerArchivedError{
-				Sequence: sequence,
-				Message:  fmt.Sprintf("ledger %d has been archived", sequence),
-			}
+			return errors.WrapLedgerArchived(sequence)
 		case 413:
 			logger.Logger.Warn("Response too large", "sequence", sequence, "status", 413)
 			return errors.WrapRPCResponseTooLarge(c.HorizonURL)
 		case 429:
 			logger.Logger.Warn("Rate limit exceeded", "sequence", sequence, "status", 429)
-			return &errors.RateLimitError{
-				Message: "rate limit exceeded, please try again later",
-			}
+			return errors.WrapRateLimitExceeded()
 		default:
 			logger.Logger.Error("Horizon error", "sequence", sequence, "status", hErr.Problem.Status, "detail", hErr.Problem.Detail)
 			return errors.WrapRPCError(c.HorizonURL, hErr.Problem.Detail, hErr.Problem.Status)
@@ -783,7 +771,6 @@ func (c *Client) GetLedgerEntries(ctx context.Context, keys []string) (map[strin
 
 	// Single batch - use existing failover logic
 	attempts := c.endpointAttempts()
-	var failures []NodeFailure
 	for attempt := 0; attempt < attempts; attempt++ {
 		fetchedEntries, err := c.getLedgerEntriesAttempt(ctx, keysToFetch)
 		if err == nil {
@@ -808,7 +795,7 @@ func (c *Client) GetLedgerEntries(ctx context.Context, keys []string) (map[strin
 			return nil, err
 		}
 	}
-	return nil, &AllNodesFailedError{Failures: failures}
+	return nil, &AllNodesFailedError{Failures: []NodeFailure{}}
 }
 
 // getLedgerEntriesConcurrent fetches multiple batches concurrently with timeout handling
@@ -903,7 +890,6 @@ func sumBatchSizes(batches [][]string) int {
 }
 
 func (c *Client) getLedgerEntriesAttempt(ctx context.Context, keysToFetch []string) (entries map[string]string, err error) {
-	startTime := time.Now()
 	// Always use the dedicated Soroban RPC URL for getLedgerEntries; this is a
 	// Soroban JSON-RPC method and is not served by the Horizon REST API.
 	targetURL := c.SorobanURL
@@ -927,6 +913,8 @@ func (c *Client) getLedgerEntriesAttempt(ctx context.Context, keysToFetch []stri
 	}()
 
 	logger.Logger.Debug("Fetching ledger entries", "count", len(keysToFetch), "url", targetURL)
+
+	startTime := time.Now()
 
 	// Fail fast if circuit breaker is open for this Soroban endpoint.
 	if !c.isHealthy(targetURL) {
@@ -1369,7 +1357,6 @@ func (c *Client) getHealthAttempt(ctx context.Context) (healthResp *GetHealthRes
 
 	// Prefer SorobanURL but fall back to the currently active HorizonURL so that
 	// rotateURL-triggered failovers are reflected in health checks.
-	targetURL = c.SorobanURL
 	if targetURL == "" {
 		targetURL = c.HorizonURL
 	}

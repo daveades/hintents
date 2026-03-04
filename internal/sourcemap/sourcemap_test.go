@@ -547,15 +547,13 @@ func TestSourceCache_Clear(t *testing.T) {
 			Files:      map[string]string{},
 			FetchedAt:  time.Now(),
 		}
-		err = cache.Put(source)
-		if err != nil {
-			t.Fatalf("Put failed for entry %d: %v", i, err)
+		if putErr := cache.Put(source); putErr != nil {
+			t.Fatalf("Put failed for entry %d: %v", i, putErr)
 		}
 	}
 
-	err = cache.Clear()
-	if err != nil {
-		t.Fatalf("Clear failed: %v", err)
+	if clearErr := cache.Clear(); clearErr != nil {
+		t.Fatalf("Clear failed: %v", clearErr)
 	}
 
 	// Verify all entries are gone
@@ -666,9 +664,8 @@ func TestResolver_ResolveFromCache(t *testing.T) {
 		},
 		FetchedAt: time.Now(),
 	}
-	err = cache.Put(source)
-	if err != nil {
-		t.Fatalf("failed to put cache entry: %v", err)
+	if putErr := cache.Put(source); putErr != nil {
+		t.Fatalf("failed to put cache entry: %v", putErr)
 	}
 
 	// Create a resolver that would fail if it hit the registry

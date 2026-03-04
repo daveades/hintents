@@ -67,9 +67,9 @@ func EliminateDeadCode(module []byte) ([]byte, Report, error) {
 	roots := make(map[uint32]struct{})
 	exportPayload, hasExport := findSection(sections, sectionExport)
 	if hasExport {
-		rootsFromExport, err := parseExportFunctionRoots(exportPayload)
-		if err != nil {
-			return nil, Report{}, fmt.Errorf("parse export section: %w", err)
+		rootsFromExport, exportErr := parseExportFunctionRoots(exportPayload)
+		if exportErr != nil {
+			return nil, Report{}, fmt.Errorf("parse export section: %w", exportErr)
 		}
 		for k := range rootsFromExport {
 			roots[k] = struct{}{}
@@ -78,18 +78,18 @@ func EliminateDeadCode(module []byte) ([]byte, Report, error) {
 
 	startPayload, hasStart := findSection(sections, sectionStart)
 	if hasStart {
-		startIdx, err := parseStartFunction(startPayload)
-		if err != nil {
-			return nil, Report{}, fmt.Errorf("parse start section: %w", err)
+		startIdx, startErr := parseStartFunction(startPayload)
+		if startErr != nil {
+			return nil, Report{}, fmt.Errorf("parse start section: %w", startErr)
 		}
 		roots[startIdx] = struct{}{}
 	}
 
 	elementPayload, hasElement := findSection(sections, sectionElement)
 	if hasElement {
-		elementRoots, _, err := rewriteElementSection(elementPayload, identityMap, true)
-		if err != nil {
-			return nil, Report{}, fmt.Errorf("parse element section: %w", err)
+		elementRoots, _, elemErr := rewriteElementSection(elementPayload, identityMap, true)
+		if elemErr != nil {
+			return nil, Report{}, fmt.Errorf("parse element section: %w", elemErr)
 		}
 		for k := range elementRoots {
 			roots[k] = struct{}{}
@@ -99,9 +99,9 @@ func EliminateDeadCode(module []byte) ([]byte, Report, error) {
 	totalFuncs := importedFuncCount + uint32(len(codeBodies))
 	edges := make([][]uint32, len(codeBodies))
 	for i, body := range codeBodies {
-		_, calls, err := rewriteCodeBody(body, identityMap)
-		if err != nil {
-			return nil, Report{}, fmt.Errorf("parse code body %d: %w", i, err)
+		_, calls, bodyErr := rewriteCodeBody(body, identityMap)
+		if bodyErr != nil {
+			return nil, Report{}, fmt.Errorf("parse code body %d: %w", i, bodyErr)
 		}
 		edges[i] = calls
 	}
@@ -164,9 +164,9 @@ func EliminateDeadCode(module []byte) ([]byte, Report, error) {
 			continue
 		}
 		newTypeIdxs = append(newTypeIdxs, typeIdxs[i])
-		rebuiltBody, _, err := rewriteCodeBody(codeBodies[i], newIndex)
-		if err != nil {
-			return nil, Report{}, fmt.Errorf("rewrite code body %d: %w", i, err)
+		rebuiltBody, _, rewriteErr := rewriteCodeBody(codeBodies[i], newIndex)
+		if rewriteErr != nil {
+			return nil, Report{}, fmt.Errorf("rewrite code body %d: %w", i, rewriteErr)
 		}
 		newBodies = append(newBodies, rebuiltBody)
 	}
@@ -176,25 +176,25 @@ func EliminateDeadCode(module []byte) ([]byte, Report, error) {
 	replacements[sectionCode] = encodeCodeSection(newBodies)
 
 	if hasExport {
-		rewrittenExport, err := rewriteExportSection(exportPayload, newIndex)
-		if err != nil {
-			return nil, Report{}, fmt.Errorf("rewrite export section: %w", err)
+		rewrittenExport, rwExportErr := rewriteExportSection(exportPayload, newIndex)
+		if rwExportErr != nil {
+			return nil, Report{}, fmt.Errorf("rewrite export section: %w", rwExportErr)
 		}
 		replacements[sectionExport] = rewrittenExport
 	}
 
 	if hasStart {
-		rewrittenStart, err := rewriteStartSection(startPayload, newIndex)
-		if err != nil {
-			return nil, Report{}, fmt.Errorf("rewrite start section: %w", err)
+		rewrittenStart, rwStartErr := rewriteStartSection(startPayload, newIndex)
+		if rwStartErr != nil {
+			return nil, Report{}, fmt.Errorf("rewrite start section: %w", rwStartErr)
 		}
 		replacements[sectionStart] = rewrittenStart
 	}
 
 	if hasElement {
-		_, rewrittenElement, err := rewriteElementSection(elementPayload, newIndex, false)
-		if err != nil {
-			return nil, Report{}, fmt.Errorf("rewrite element section: %w", err)
+		_, rewrittenElement, rwElemErr := rewriteElementSection(elementPayload, newIndex, false)
+		if rwElemErr != nil {
+			return nil, Report{}, fmt.Errorf("rewrite element section: %w", rwElemErr)
 		}
 		replacements[sectionElement] = rewrittenElement
 	}
@@ -271,7 +271,6 @@ func parseImportedFunctionCount(payload []byte) (uint32, error) {
 	pos += n
 	var fnCount uint32
 	for i := uint32(0); i < count; i++ {
-		var err error
 		pos, err = skipName(payload, pos)
 		if err != nil {
 			return 0, err
@@ -287,20 +286,18 @@ func parseImportedFunctionCount(payload []byte) (uint32, error) {
 		pos++
 		switch kind {
 		case 0x00:
-			_, n, err := readU32(payload, pos)
+			_, n, err = readU32(payload, pos)
 			if err != nil {
 				return 0, err
 			}
 			pos += n
 			fnCount++
 		case 0x01:
-			var err error
 			pos, err = skipTableType(payload, pos)
 			if err != nil {
 				return 0, err
 			}
 		case 0x02:
-			var err error
 			pos, err = skipLimits(payload, pos)
 			if err != nil {
 				return 0, err
@@ -315,7 +312,7 @@ func parseImportedFunctionCount(payload []byte) (uint32, error) {
 				return 0, fmt.Errorf("tag import truncated")
 			}
 			pos++
-			_, n, err := readU32(payload, pos)
+			_, n, err = readU32(payload, pos)
 			if err != nil {
 				return 0, err
 			}
@@ -811,7 +808,7 @@ func rewriteCodeBody(body []byte, remap func(uint32) (uint32, bool)) ([]byte, []
 	}
 	pos += n
 	for i := uint32(0); i < localDeclCount; i++ {
-		_, n, err := readU32(body, pos)
+		_, n, err = readU32(body, pos)
 		if err != nil {
 			return nil, nil, err
 		}

@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func buildTestContext(t *testing.T, d time.Duration) (interface{ Done() <-chan struct{} }, func()) {
+func buildTestContext(t *testing.T, d time.Duration) (context.Context, func()) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), d)
 	return ctx, cancel

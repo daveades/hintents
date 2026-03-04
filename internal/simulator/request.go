@@ -15,16 +15,17 @@ type SimulationRequest struct {
 	ProtocolVersion *uint32           `json:"protocol_version,omitempty"`
 	MockBaseFee     *uint32           `json:"mock_base_fee,omitempty"`
 	MockGasPrice    *uint64           `json:"mock_gas_price,omitempty"`
+	MemoryLimit     *uint64           `json:"memory_limit,omitempty"`
+	EnableCoverage  bool              `json:"enable_coverage,omitempty"`
+	CoverageLCOVPath *string          `json:"coverage_lcov_path,omitempty"`
+
+	RestorePreamble map[string]interface{} `json:"restore_preamble,omitempty"`
 
 	AuthTraceOpts       *AuthTraceOptions      `json:"auth_trace_opts,omitempty"`
 	CustomAuthCfg       map[string]interface{} `json:"custom_auth_config,omitempty"`
 	ResourceCalibration *ResourceCalibration   `json:"resource_calibration,omitempty"`
 
-	SandboxNativeTokenCapStroops *uint64                `json:"sandbox_native_token_cap_stroops,omitempty"`
-	MemoryLimit                  *uint64                `json:"memory_limit,omitempty"`
-	CoverageLCOVPath             *string                `json:"coverage_lcov_path,omitempty"`
-	EnableCoverage               bool                   `json:"enable_coverage,omitempty"`
-	RestorePreamble              map[string]interface{} `json:"restore_preamble,omitempty"`
+	SandboxNativeTokenCapStroops *uint64 `json:"sandbox_native_token_cap_stroops,omitempty"`
 }
 
 type ResourceCalibration struct {

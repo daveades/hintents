@@ -39,8 +39,7 @@ func InitDB() (*Store, error) {
 		return nil, fmt.Errorf("failed to get home dir: %w", err)
 	}
 	dir := filepath.Join(home, ".erst")
-	err = os.MkdirAll(dir, 0755)
-	if err != nil {
+	if err = os.MkdirAll(dir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create data dir: %w", err)
 	}
 	dbPath := filepath.Join(dir, "sessions.db")
@@ -50,7 +49,7 @@ func InitDB() (*Store, error) {
 		return nil, fmt.Errorf("failed to open db: %w", err)
 	}
 
-	if err := initSchema(db); err != nil {
+	if err = initSchema(db); err != nil {
 		db.Close()
 		return nil, err
 	}

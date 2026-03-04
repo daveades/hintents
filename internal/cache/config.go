@@ -49,8 +49,7 @@ func LoadConfig() (GlobalConfig, error) {
 	}
 
 	// If config file doesn't exist, return default config
-	_, err = os.Stat(configPath)
-	if os.IsNotExist(err) {
+	if _, statErr := os.Stat(configPath); os.IsNotExist(statErr) {
 		logger.Logger.Debug("Config file does not exist, using defaults")
 		return DefaultGlobalConfig(), nil
 	}
@@ -63,7 +62,7 @@ func LoadConfig() (GlobalConfig, error) {
 	}
 
 	var config GlobalConfig
-	if err := json.Unmarshal(data, &config); err != nil {
+	if err = json.Unmarshal(data, &config); err != nil {
 		logger.Logger.Warn("Failed to parse config file, using defaults", "error", err)
 		return DefaultGlobalConfig(), nil
 	}
@@ -80,8 +79,7 @@ func SaveConfig(config GlobalConfig) error {
 
 	// Create directory if it doesn't exist
 	configDir := filepath.Dir(configPath)
-	err = os.MkdirAll(configDir, 0755)
-	if err != nil {
+	if err = os.MkdirAll(configDir, 0755); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
@@ -92,7 +90,7 @@ func SaveConfig(config GlobalConfig) error {
 	}
 
 	// Write to file
-	if err := os.WriteFile(configPath, data, 0644); err != nil {
+	if err = os.WriteFile(configPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 

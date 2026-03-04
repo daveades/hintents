@@ -182,11 +182,11 @@ impl Secp256k1SoftwareSigner {
 #[async_trait]
 impl Signer for Secp256k1SoftwareSigner {
     async fn sign(&self, data: &[u8]) -> Result<Signature, SignerError> {
-        use k256::ecdsa::signature::Signer;
-        
+        use k256::ecdsa::signature::Signer as _;
+
         let signature: k256::ecdsa::Signature = self.signing_key
-            .sign_digest_recoverable(k256::ecdsa::digest::Digest::hash(data))
-            .map_err(|e| SignerError::Crypto(format!("Failed to sign data: {}", e)))?;
+            .sign(data);
+
         
         Ok(Signature {
             algorithm: self.algorithm.clone(),

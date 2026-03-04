@@ -28,7 +28,7 @@ fn test_signature_verification_mock_true() {
     };
 
     assert!(request.mock_signature_verification.is_some());
-    assert_eq!(request.mock_signature_verification.unwrap(), true);
+    assert!(request.mock_signature_verification.unwrap());
 }
 
 #[test]
@@ -54,7 +54,7 @@ fn test_signature_verification_mock_false() {
     };
 
     assert!(request.mock_signature_verification.is_some());
-    assert_eq!(request.mock_signature_verification.unwrap(), false);
+    assert!(!request.mock_signature_verification.unwrap());
 }
 
 #[test]

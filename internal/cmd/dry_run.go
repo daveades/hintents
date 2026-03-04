@@ -79,7 +79,7 @@ func runDryRun(cmd *cobra.Command, args []string) error {
 		return errors.WrapUnmarshalFailed(err, "envelope base64")
 	}
 	var envelope xdr.TransactionEnvelope
-	if err := xdr.SafeUnmarshal(envBytes, &envelope); err != nil {
+	if err = xdr.SafeUnmarshal(envBytes, &envelope); err != nil {
 		return errors.WrapUnmarshalFailed(err, "TransactionEnvelope")
 	}
 
@@ -106,7 +106,7 @@ func runDryRun(cmd *cobra.Command, args []string) error {
 	}
 
 	// Preferred path: Soroban RPC preflight (simulateTransaction)
-	if preflight, err := client.SimulateTransaction(ctx, envXdrB64); err == nil {
+	if preflight, simErr := client.SimulateTransaction(ctx, envXdrB64); simErr == nil {
 		fee := preflight.Result.MinResourceFee
 		cpu := preflight.Result.Cost.CpuInsns
 		mem := preflight.Result.Cost.MemBytes
@@ -155,7 +155,6 @@ func runDryRun(cmd *cobra.Command, args []string) error {
 	}
 
 	gas, err := simulator.EstimateGas(runner, simReq)
-	_, err = runner.Run(ctx, simReq)
 	if err != nil {
 		return errors.WrapSimulationFailed(fmt.Errorf("gas estimation: %w", err), "")
 	}

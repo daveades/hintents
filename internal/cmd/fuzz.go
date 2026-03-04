@@ -80,14 +80,13 @@ func runFuzz(cmd *cobra.Command, args []string) error {
 	// If specific XDR is provided, validate and fuzz it
 	if fuzzInputXDR != "" {
 		// Validate it's valid hex
-		if _, hexErr := hex.DecodeString(fuzzInputXDR); hexErr != nil {
-			return fmt.Errorf("invalid XDR hex encoding: %w", hexErr)
+		if _, decodeErr := hex.DecodeString(fuzzInputXDR); decodeErr != nil {
+			return fmt.Errorf("invalid XDR hex encoding: %w", decodeErr)
 		}
 
-		var result *simulator.FuzzingResult
-		result, err = harness.FuzzXDR(fuzzInputXDR)
-		if err != nil {
-			return fmt.Errorf("fuzzing failed: %w", err)
+		result, fuzzErr := harness.FuzzXDR(fuzzInputXDR)
+		if fuzzErr != nil {
+			return fmt.Errorf("fuzzing failed: %w", fuzzErr)
 		}
 
 		fmt.Printf("\nFuzz Test Result:\n")

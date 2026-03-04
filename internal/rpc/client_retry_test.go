@@ -71,7 +71,6 @@ func TestSimulateTransactionRetriesOnRateLimit(t *testing.T) {
 }
 
 func TestGetLedgerEntriesRetriesOnRateLimit(t *testing.T) {
-	// Use a valid base64-encoded XDR LedgerKey so VerifyLedgerEntries passes.
 	var calls int32
 	validKey := createTestLedgerKey(t, 42)
 

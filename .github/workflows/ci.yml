@@ -103,6 +103,12 @@ jobs:
           }
           echo " No unused variables detected"
 
+      - name: Build
+        run: go build -v ./...
+
+      - name: Build erst binary for integration tests
+        run: go build -o erst ./cmd/erst
+
       - name: Run tests (race)
         if: matrix.os == 'ubuntu-latest'
         run: go test -v -race ./...
@@ -110,9 +116,6 @@ jobs:
       - name: Run tests (compile-only)
         if: matrix.os != 'ubuntu-latest'
         run: go test -short -run '^$' -v ./...
-
-      - name: Build
-        run: go build -v ./...
 
   # ============================================
   # Cross-Platform CLI Binary Integration

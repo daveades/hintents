@@ -85,8 +85,8 @@ func (g *TestGenerator) GenerateTests(ctx context.Context, txHash string, lang s
 	case "rust":
 		return g.GenerateRustTest(testData)
 	case "both":
-		if err := g.GenerateGoTest(testData); err != nil {
-			return err
+		if goErr := g.GenerateGoTest(testData); goErr != nil {
+			return goErr
 		}
 		return g.GenerateRustTest(testData)
 	default:
@@ -125,9 +125,8 @@ func (g *TestGenerator) GenerateGoTest(data *TestData) error {
 	}
 
 	outputDir := filepath.Join(g.OutputDir, "internal", "simulator", "regression_tests")
-	err = os.MkdirAll(outputDir, 0755)
-	if err != nil {
-		return fmt.Errorf("failed to create output directory: %w", err)
+	if mkdirErr := os.MkdirAll(outputDir, 0755); mkdirErr != nil {
+		return fmt.Errorf("failed to create output directory: %w", mkdirErr)
 	}
 
 	filename := filepath.Join(outputDir, fmt.Sprintf("regression_%s_test.go", data.TestName))
@@ -153,9 +152,8 @@ func (g *TestGenerator) GenerateRustTest(data *TestData) error {
 	}
 
 	outputDir := filepath.Join(g.OutputDir, "simulator", "tests", "regression")
-	err = os.MkdirAll(outputDir, 0755)
-	if err != nil {
-		return fmt.Errorf("failed to create output directory: %w", err)
+	if mkdirErr := os.MkdirAll(outputDir, 0755); mkdirErr != nil {
+		return fmt.Errorf("failed to create output directory: %w", mkdirErr)
 	}
 
 	filename := filepath.Join(outputDir, fmt.Sprintf("regression_%s.rs", data.TestName))

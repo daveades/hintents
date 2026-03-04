@@ -10,13 +10,7 @@ import (
 	"github.com/dotandev/hintents/internal/errors"
 )
 
-var defaultValidators = []Validator{
-	RPCValidator{},
-	NetworkValidator{},
-	LogLevelValidator{},
-	TimeoutValidator{},
-	CrashReportingValidator{},
-}
+const maxRequestTimeout = 300
 
 type TimeoutValidator struct{}
 
@@ -47,15 +41,6 @@ func (CrashReportingValidator) Validate(cfg *Config) error {
 		return errors.WrapValidationError(
 			fmt.Sprintf("crash_sentry_dsn must use https scheme, got %q", cfg.CrashSentryDSN),
 		)
-	}
-	return nil
-}
-
-func runValidators(cfg *Config, validators []Validator) error {
-	for _, v := range validators {
-		if err := v.Validate(cfg); err != nil {
-			return err
-		}
 	}
 	return nil
 }

@@ -70,8 +70,7 @@ func TestLoadOverrideState(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tmpFile := filepath.Join(t.TempDir(), "override.json")
-			err := os.WriteFile(tmpFile, []byte(tt.content), 0644)
-			if err != nil {
+			if err := os.WriteFile(tmpFile, []byte(tt.content), 0644); err != nil {
 				t.Fatalf("failed to create temp file: %v", err)
 			}
 
@@ -110,9 +109,8 @@ func TestLoadOverrideState_RealWorldExample(t *testing.T) {
 		t.Fatalf("failed to marshal test data: %v", err)
 	}
 
-	err = os.WriteFile(tmpFile, data, 0644)
-	if err != nil {
-		t.Fatalf("failed to write test file: %v", err)
+	if writeErr := os.WriteFile(tmpFile, data, 0644); writeErr != nil {
+		t.Fatalf("failed to write test file: %v", writeErr)
 	}
 
 	entries, err := loadOverrideState(tmpFile)

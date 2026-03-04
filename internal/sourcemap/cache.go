@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/dotandev/hintents/internal/logger"
@@ -187,32 +186,5 @@ func (sc *SourceCache) lockPath(entryPath string) string {
 	return entryPath + ".lock"
 }
 
-// acquireLock opens or creates a lock file and applies an OS-level flock:
-//   - exclusive=true  → LOCK_EX (writer lock)
-//   - exclusive=false → LOCK_SH (reader lock)
-//
-// The returned *os.File must be passed to releaseLock when the critical
-// section is done.
-func (sc *SourceCache) acquireLock(entryPath string, exclusive bool) (*os.File, error) {
-	lp := sc.lockPath(entryPath)
-	lf, err := os.OpenFile(lp, os.O_CREATE|os.O_RDWR, 0600)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open lock file %q: %w", lp, err)
-	}
-
-	how := syscall.LOCK_SH
-	if exclusive {
-		how = syscall.LOCK_EX
-	}
-	if err := syscall.Flock(int(lf.Fd()), how); err != nil {
-		_ = lf.Close()
-		return nil, fmt.Errorf("flock failed on %q: %w", lp, err)
-	}
-	return lf, nil
-}
-
-// releaseLock unlocks and closes the lock file.
-func (sc *SourceCache) releaseLock(lf *os.File) {
-	_ = syscall.Flock(int(lf.Fd()), syscall.LOCK_UN)
-	_ = lf.Close()
-}
+// acquireLock and releaseLock are implemented in
+// cache_lock_unix.go and cache_lock_windows.go.

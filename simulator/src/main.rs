@@ -4,29 +4,20 @@
 #![allow(warnings, clippy::all, clippy::pedantic, clippy::nursery)]
 
 mod config;
-mod gas_optimizer;
-mod git_detector;
 mod runner;
-mod snapshot;
-mod source_map_cache;
-mod source_mapper;
-mod stack_trace;
-mod types;
 mod vm;
 mod wasm;
-mod wasm_types;
 
-use crate::gas_optimizer::{BudgetMetrics, GasOptimizationAdvisor, CPU_LIMIT, MEMORY_LIMIT};
-use crate::source_mapper::SourceMapper;
-use crate::stack_trace::WasmStackTrace;
-use crate::types::*;
 use base64::Engine as _;
+use simulator::gas_optimizer::{BudgetMetrics, GasOptimizationAdvisor, CPU_LIMIT, MEMORY_LIMIT};
+use simulator::source_mapper::SourceMapper;
+use simulator::stack_trace::WasmStackTrace;
+use simulator::types::*;
 use soroban_env_host::xdr::ReadXdr;
 use soroban_env_host::{
     xdr::{Operation, OperationBody},
     Host, HostError,
 };
-use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::io::{self, Read};
@@ -37,23 +28,19 @@ use tracing_subscriber::{fmt, EnvFilter};
 const ERR_MEMORY_LIMIT_EXCEEDED: &str = "ERR_MEMORY_LIMIT_EXCEEDED";
 
 fn init_logger() {
-    // Check if the environment variable ERST_LOG_FORMAT is set to "json"
     let use_json = env::var("ERST_LOG_FORMAT")
         .map(|val| val.to_lowercase() == "json")
         .unwrap_or(false);
 
-    // Default to "info" level logging if not specified
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
     let subscriber = fmt::Subscriber::builder()
         .with_env_filter(filter)
-        .with_writer(std::io::stderr); // Write logs to stderr
+        .with_writer(std::io::stderr);
 
     if use_json {
-        // Output machine-parsable JSON
         subscriber.json().flatten_event(true).init();
     } else {
-        // Output human-readable text
         subscriber.compact().init();
     }
 }
@@ -284,9 +271,6 @@ fn categorize_events(events: &soroban_env_host::events::Events) -> Vec<Categoriz
                     .map(|t| format!("{t:?}"))
                     .collect::<Vec<String>>(),
             };
-            let data = match &e.event.body {
-                soroban_env_host::xdr::ContractEventBody::V0(v0) => format!("{:?}", v0.data),
-            };
 
             let wasm_instruction = extract_wasm_instruction(&topics, &data);
             CategorizedEvent {
@@ -304,6 +288,7 @@ fn categorize_events(events: &soroban_env_host::events::Events) -> Vec<Categoriz
                     contract_id,
                     topics,
                     data,
+                    // failed_call=true means the call failed, so successful = !failed_call
                     wasm_instruction,
                     // failed_call=true means the call that emitted this event
                     // actually failed; so a successful call is the inverse.
@@ -342,13 +327,10 @@ fn extract_wasm_instruction(topics: &[String], data: &str) -> Option<String> {
 /// May panic if JSON serialization of the response fails (should not happen
 /// with valid `SimulationResponse` structures).
 fn main() {
-    // 1. Initialize the logger immediately
     init_logger();
 
-    // 2. Log that we started
     tracing::info!(event = "simulator_started", "Simulator initializing...");
 
-    // Read JSON from Stdin
     let mut buffer = String::new();
     if let Err(e) = io::stdin().read_to_string(&mut buffer) {
         let res = SimulationResponse {
@@ -379,7 +361,6 @@ fn main() {
         return;
     }
 
-    // Parse Request
     let request: SimulationRequest = match serde_json::from_str(&buffer) {
         Ok(req) => req,
         Err(e) => {
@@ -409,7 +390,6 @@ fn main() {
         }
     };
 
-    // Decode Envelope XDR
     let envelope = match base64::engine::general_purpose::STANDARD.decode(&request.envelope_xdr) {
         Ok(bytes) => match soroban_env_host::xdr::TransactionEnvelope::from_xdr(
             bytes,
@@ -427,7 +407,6 @@ fn main() {
         }
     };
 
-    // Decode ResultMeta XDR
     eprintln!(
         "Debug: Received ResultMetaXdr len: {}",
         request.result_meta_xdr.len()
@@ -449,14 +428,20 @@ fn main() {
                     ) {
                         Ok(meta) => Some(meta),
                         Err(e) => {
-                            eprintln!("Warning: Failed to parse ResultMeta XDR: {}. Proceeding with empty storage.", e);
+                            eprintln!(
+                                "Warning: Failed to parse ResultMeta XDR: {}. Proceeding with empty storage.",
+                                e
+                            );
                             None
                         }
                     }
                 }
             }
             Err(e) => {
-                eprintln!("Warning: Failed to decode ResultMeta Base64: {e}. Proceeding with empty storage.");
+                eprintln!(
+                    "Warning: Failed to decode ResultMeta Base64: {}. Proceeding with empty storage.",
+                    e
+                );
                 None
             }
         }
@@ -469,12 +454,7 @@ fn main() {
                 if let Err(e) = vm::enforce_soroban_compatibility(&wasm_bytes) {
                     return send_error(format!("Strict VM enforcement failed: {}", e));
                 }
-                let mapper = if request.enable_coverage {
-                    SourceMapper::new_with_options(wasm_bytes, false)
-                } else {
-                    SourceMapper::new_with_options(wasm_bytes, false)
-                };
-
+                let mapper = SourceMapper::new_with_options(wasm_bytes, false);
                 if mapper.has_debug_symbols() {
                     eprintln!("Debug symbols found in WASM");
                     Some(mapper)
@@ -514,9 +494,8 @@ fn main() {
     // --- END: Local WASM Loading Integration ---
     // Populate Host Storage
     let snapshot = if let Some(entries) = &request.ledger_entries {
-        let snap = snapshot::LedgerSnapshot::new();
+        let snap = simulator::snapshot::LedgerSnapshot::new();
         for (key_xdr, entry_xdr) in entries {
-            // Decode Key
             let _key = match base64::engine::general_purpose::STANDARD.decode(key_xdr) {
                 Ok(b) => match soroban_env_host::xdr::LedgerKey::from_xdr(
                     b,
@@ -534,7 +513,6 @@ fn main() {
                 }
             };
 
-            // Decode Entry
             let _entry = match base64::engine::general_purpose::STANDARD.decode(entry_xdr) {
                 Ok(b) => match soroban_env_host::xdr::LedgerEntry::from_xdr(
                     b,
@@ -558,12 +536,11 @@ fn main() {
         }
         snap
     } else {
-        snapshot::LedgerSnapshot::new()
+        simulator::snapshot::LedgerSnapshot::new()
     };
 
     let loaded_entries_count = snapshot.len();
 
-    // Extract Operations and Simulate
     let operations = match &envelope {
         soroban_env_host::xdr::TransactionEnvelope::Tx(tx_v1) => &tx_v1.tx.operations,
         soroban_env_host::xdr::TransactionEnvelope::TxV0(tx_v0) => &tx_v0.tx.operations,
@@ -584,7 +561,6 @@ fn main() {
         )
     }));
 
-    // Budget and Reporting
     let budget = host.budget_cloned();
     let cpu_insns = budget.get_cpu_insns_consumed().unwrap_or(0);
     let mem_bytes = budget.get_mem_bytes_consumed().unwrap_or(0);
@@ -616,7 +592,6 @@ fn main() {
 
     let mut flamegraph_svg = None;
     if request.profile.unwrap_or(false) {
-        // Simple simulated flamegraph for demonstration
         let folded_data = format!("Total;CPU {}\nTotal;Memory {}\n", cpu_insns, mem_bytes);
         let mut result_vec = Vec::new();
         let mut options = inferno::flamegraph::Options::default();
@@ -654,7 +629,6 @@ fn main() {
 
     match result {
         Ok(Ok(exec_logs)) => {
-            // Extract both raw event strings and structured diagnostic events
             let (events, diagnostic_events): (Vec<String>, Vec<DiagnosticEvent>) =
                 match host.get_events() {
                     Ok(evs) => {
@@ -663,7 +637,7 @@ fn main() {
                         let diag_events: Vec<DiagnosticEvent> = (evs.0)
                             .iter()
                             .map(|event| {
-                                let event_type = match &event.event.type_ {
+                                let event_type = match event.event.type_ {
                                     soroban_env_host::xdr::ContractEventType::Contract => {
                                         "contract".to_string()
                                     }
@@ -675,17 +649,14 @@ fn main() {
                                     }
                                 };
 
-                                let contract_id = event
-                                    .event
-                                    .contract_id
-                                    .as_ref()
-                                    .map(|contract_id| format!("{:?}", contract_id));
+                                let contract_id =
+                                    event.event.contract_id.as_ref().map(contract_id_to_hex);
 
                                 let (topics, data) = match &event.event.body {
                                     soroban_env_host::xdr::ContractEventBody::V0(v0) => {
                                         let topics: Vec<String> =
-                                            v0.topics.iter().map(|t| format!("{:?}", t)).collect();
-                                        let data = format!("{:?}", v0.data);
+                                            v0.topics.iter().map(scval_to_xdr_base64).collect();
+                                        let data = scval_to_xdr_base64(&v0.data);
                                         (topics, data)
                                     }
                                 };
@@ -696,6 +667,7 @@ fn main() {
                                     contract_id,
                                     topics,
                                     data,
+                                    // failed_call=true means the call failed, so successful = !failed_call
                                     wasm_instruction,
                                     in_successful_contract_call: !event.failed_call,
                                 }
@@ -709,7 +681,6 @@ fn main() {
                     ),
                 };
 
-            // Capture categorized events for analyzer
             let categorized_events = match host.get_events() {
                 Ok(evs) => categorize_events(&evs),
                 Err(_) => vec![],
@@ -1315,7 +1286,7 @@ mod tests {
     /// and the `source_location` field stays absent in serialized JSON.
     #[test]
     fn test_source_mapper_no_symbols_gives_no_location() {
-        use crate::source_mapper::SourceMapper;
+        use simulator::source_mapper::SourceMapper;
 
         let wasm_bytes = vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]; // WASM magic + version
         let mapper = SourceMapper::new_with_options(wasm_bytes, false);

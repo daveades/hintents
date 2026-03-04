@@ -46,7 +46,7 @@ func reportExec(cmd *cobra.Command, args []string) error {
 		return errors.WrapCliArgumentRequired("file")
 	}
 
-	if _, err := os.Stat(reportFile); os.IsNotExist(err) {
+	if _, statErr := os.Stat(reportFile); os.IsNotExist(statErr) {
 		return errors.WrapValidationError(fmt.Sprintf("trace file not found: %s", reportFile))
 	}
 
@@ -130,16 +130,14 @@ func reportExec(cmd *cobra.Command, args []string) error {
 	}
 
 	if reportFormat == "json" {
-		var jsonData []byte
-		jsonData, err = json.MarshalIndent(generatedReport, "", "  ")
-		if err != nil {
-			return errors.WrapMarshalFailed(err)
+		jsonData, marshalErr := json.MarshalIndent(generatedReport, "", "  ")
+		if marshalErr != nil {
+			return errors.WrapMarshalFailed(marshalErr)
 		}
 
 		filename := reportOutput + "/report.json"
-		err = os.WriteFile(filename, jsonData, 0644)
-		if err != nil {
-			return errors.WrapValidationError(fmt.Sprintf("failed to write JSON report: %v", err))
+		if writeErr := os.WriteFile(filename, jsonData, 0644); writeErr != nil {
+			return errors.WrapValidationError(fmt.Sprintf("failed to write JSON report: %v", writeErr))
 		}
 
 		fmt.Printf("[OK] Report generated: %s\n", filename)

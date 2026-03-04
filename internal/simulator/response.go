@@ -9,6 +9,8 @@ type SimulationResponse struct {
 	Status            string               `json:"status"`
 	Error             string               `json:"error,omitempty"`
 	ErrorCode         string               `json:"error_code,omitempty"`
+	LCOVReport        string               `json:"lcov_report,omitempty"`
+	LCOVReportPath    string               `json:"lcov_report_path,omitempty"`
 	Events            []string             `json:"events,omitempty"`
 	DiagnosticEvents  []DiagnosticEvent    `json:"diagnostic_events,omitempty"`
 	Logs              []string             `json:"logs,omitempty"`

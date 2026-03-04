@@ -8,7 +8,6 @@ use soroban_env_host::{
     DiagnosticLevel, Error as EnvError, Host, HostError, TryIntoVal, Val,
 };
 
-#[allow(dead_code)]
 /// Wrapper around the Soroban Host to manage initialization and execution context.
 pub struct SimHost {
     pub inner: Host,
@@ -17,12 +16,11 @@ pub struct SimHost {
     pub memory_limit: Option<u64>,
 }
 
-#[allow(dead_code)]
 impl SimHost {
     /// Initialize a new Host with optional budget settings and resource calibration.
     pub fn new(
         budget_limits: Option<(u64, u64)>,
-        calibration: Option<crate::types::ResourceCalibration>,
+        calibration: Option<simulator::types::ResourceCalibration>,
         memory_limit: Option<u64>,
     ) -> Self {
         let budget = Budget::default();
@@ -42,7 +40,6 @@ impl SimHost {
         // Host::with_storage_and_budget is available in recent versions
         let host = Host::with_storage_and_budget(Storage::default(), budget);
 
-        // Enable debug mode for better diagnostics
         host.set_diagnostic_level(DiagnosticLevel::Debug)
             .expect("failed to set diagnostic level");
 
@@ -55,26 +52,25 @@ impl SimHost {
     }
 
     /// Set the contract ID for execution context.
-    pub fn set_contract_id(&mut self, id: Hash) {
-        self.contract_id = Some(id);
+    pub fn _set_contract_id(&mut self, id: Hash) {
+        self._contract_id = Some(id);
     }
 
     /// Set the function name to invoke.
-    pub fn set_fn_name(&mut self, name: &str) -> Result<(), HostError> {
-        self.fn_name = Some(name.to_string());
+    pub fn _set_fn_name(&mut self, name: &str) -> Result<(), HostError> {
+        self._fn_name = Some(name.to_string());
         Ok(())
     }
 
-    /// Helper to convert a u32 to a Soroban Val
-    pub fn val_from_u32(&self, v: u32) -> Val {
+    /// Convert a u32 to a Soroban Val.
+    pub fn _val_from_u32(&self, v: u32) -> Val {
         Val::from_u32(v).into()
     }
 
-    /// Helper to convert a Val back to u32
-    pub fn val_to_u32(&self, v: Val) -> Result<u32, HostError> {
+    /// Convert a Val back to u32.
+    pub fn _val_to_u32(&self, v: Val) -> Result<u32, HostError> {
         v.try_into_val(&self.inner).map_err(|_| {
-            let e = EnvError::from_type_and_code(ScErrorType::Context, ScErrorCode::InvalidInput);
-            e.into()
+            EnvError::from_type_and_code(ScErrorType::Context, ScErrorCode::InvalidInput).into()
         })
     }
 
@@ -135,29 +131,22 @@ mod tests {
         let mut host = SimHost::new(None, None, None);
         // Test setting contract ID (dummy hash)
         let hash = Hash([0u8; 32]);
-        host.set_contract_id(hash);
-        assert!(host.contract_id.is_some());
+        host._set_contract_id(hash);
+        assert!(host._contract_id.is_some());
 
-        // Test setting function name
-        host.set_fn_name("add")
-            .expect("failed to set function name");
-        assert!(host.fn_name.is_some());
+        host._set_fn_name("add").expect("failed to set function name");
+        assert!(host._fn_name.is_some());
     }
 
     #[test]
     fn test_simple_value_handling() {
         let host = SimHost::new(None, None, None);
 
-        let a = 10u32;
-        let b = 20u32;
+        let val_a = host._val_from_u32(10);
+        let val_b = host._val_from_u32(20);
 
-        // Convert to Val (simulating inputs)
-        let val_a = host.val_from_u32(a);
-        let val_b = host.val_from_u32(b);
-
-        // Perform additions by converting back (simulating host operation handling)
-        let res_a = host.val_to_u32(val_a).expect("conversion failed");
-        let res_b = host.val_to_u32(val_b).expect("conversion failed");
+        let res_a = host._val_to_u32(val_a).expect("conversion failed");
+        let res_b = host._val_to_u32(val_b).expect("conversion failed");
 
         assert_eq!(res_a + res_b, 30);
     }

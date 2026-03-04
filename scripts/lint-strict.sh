@@ -1,8 +1,5 @@
-# Copyright (c) Hintents Authors.
-# SPDX-License-Identifier: Apache-2.0
-
 #!/usr/bin/env bash
-# Copyright (c) 2025 ERST Contributors
+# Copyright 2025 Erst Users
 # SPDX-License-Identifier: Apache-2.0
 
 set -euo pipefail

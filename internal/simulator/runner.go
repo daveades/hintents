@@ -302,7 +302,7 @@ func (r *Runner) Run(ctx context.Context, req *SimulationRequest) (*SimulationRe
 		classified := (&ipc.Error{Code: resp.ErrorCode, Message: resp.Error}).ToErstError()
 		logger.Logger.Error("Simulator returned error",
 			"code", classified.Code,
-			"original", classified.OriginalError,
+			"original", classified.OrigErr,
 		)
 		return nil, classified
 	}

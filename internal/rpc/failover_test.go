@@ -7,7 +7,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/dotandev/hintents/internal/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -47,5 +46,5 @@ func TestClient_GetTransaction_Failover_Logic(t *testing.T) {
 	fallbackErr, ok := err.(*AllNodesFailedError)
 	assert.True(t, ok, "Error should be of type *AllNodesFailedError")
 	assert.Equal(t, 2, len(fallbackErr.Failures), "Should have recorded 2 failures")
-	assert.True(t, errors.Is(err, errors.ErrAllRPCFailed))
+	assert.Contains(t, err.Error(), "all RPC endpoints failed")
 }

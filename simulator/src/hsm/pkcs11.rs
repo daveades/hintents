@@ -5,8 +5,7 @@
 
 use super::{PublicKey, Signature, Signer, SignerError, SignerInfo, Pkcs11SignerConfig};
 use async_trait::async_trait;
-use libloading::{Library, Symbol};
-use serde::{Deserialize, Serialize};
+use libloading::Library;
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_ulong, c_void};

@@ -1,4 +1,4 @@
-// Copyright 2025 Erst Users
+// Copyright (c) Hintents Authors.
 // SPDX-License-Identifier: Apache-2.0
 
 import { Trace, TraceStep } from './erstClient';

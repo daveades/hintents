@@ -10,6 +10,21 @@ import (
 	"github.com/dotandev/hintents/internal/errors"
 )
 
+// Validator validates a specific aspect of the configuration.
+type Validator interface {
+	Validate(cfg *Config) error
+}
+
+// NetworkValidator checks that the configured network is recognized.
+type NetworkValidator struct{}
+
+func (v NetworkValidator) Validate(cfg *Config) error {
+	if cfg.Network != "" && !validNetworks[string(cfg.Network)] {
+		return errors.WrapInvalidNetwork(string(cfg.Network))
+	}
+	return nil
+}
+
 // RPCValidator checks that RPC connection fields are properly set.
 type RPCValidator struct{}
 

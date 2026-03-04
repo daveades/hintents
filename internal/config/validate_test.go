@@ -8,6 +8,96 @@ import (
 	"testing"
 )
 
+func TestRPCValidator_EmptyURL_Validate(t *testing.T) {
+	cfg := &Config{RpcUrl: "", Network: NetworkTestnet, LogLevel: "info", RequestTimeout: 15}
+	err := RPCValidator{}.Validate(cfg)
+	if err == nil {
+		t.Fatal("expected error for empty rpc_url")
+	}
+	if !strings.Contains(err.Error(), "rpc_url cannot be empty") {
+		t.Errorf("unexpected error message: %v", err)
+	}
+}
+
+func TestRPCValidator_InvalidScheme_Validate(t *testing.T) {
+	cfg := &Config{RpcUrl: "ftp://bad.example.com", Network: NetworkTestnet, LogLevel: "info", RequestTimeout: 15}
+	err := RPCValidator{}.Validate(cfg)
+	if err == nil {
+		t.Fatal("expected error for ftp scheme")
+	}
+	if !strings.Contains(err.Error(), "http or https") {
+		t.Errorf("unexpected error message: %v", err)
+	}
+}
+
+func TestRPCValidator_ValidHTTPS(t *testing.T) {
+	cfg := &Config{RpcUrl: "https://soroban-testnet.stellar.org"}
+	if err := (RPCValidator{}).Validate(cfg); err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
+}
+
+func TestRPCValidator_ValidHTTP(t *testing.T) {
+	cfg := &Config{RpcUrl: "http://localhost:8000"}
+	if err := (RPCValidator{}).Validate(cfg); err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
+}
+
+func TestNetworkValidator_Invalid(t *testing.T) {
+	cfg := &Config{RpcUrl: "https://test.com", Network: Network("mainnet")}
+	err := NetworkValidator{}.Validate(cfg)
+	if err == nil {
+		t.Fatal("expected error for invalid network")
+	}
+	if !strings.Contains(err.Error(), "INVALID_NETWORK") {
+		t.Errorf("unexpected error message: %v", err)
+	}
+}
+
+func TestNetworkValidator_AllValid(t *testing.T) {
+	for _, net := range []Network{NetworkPublic, NetworkTestnet, NetworkFuturenet, NetworkStandalone} {
+		cfg := &Config{Network: net}
+		if err := (NetworkValidator{}).Validate(cfg); err != nil {
+			t.Errorf("network %q should be valid: %v", net, err)
+		}
+	}
+}
+
+func TestNetworkValidator_EmptyAllowed_Validate(t *testing.T) {
+	cfg := &Config{Network: ""}
+	if err := (NetworkValidator{}).Validate(cfg); err != nil {
+		t.Errorf("empty network should be allowed: %v", err)
+	}
+}
+
+func TestLogLevelValidator_Invalid(t *testing.T) {
+	cfg := &Config{LogLevel: "verbose"}
+	err := LogLevelValidator{}.Validate(cfg)
+	if err == nil {
+		t.Fatal("expected error for invalid log level")
+	}
+	if !strings.Contains(err.Error(), "log_level must be one of") {
+		t.Errorf("unexpected error message: %v", err)
+	}
+}
+
+func TestLogLevelValidator_AllValid(t *testing.T) {
+	for _, lvl := range []string{"trace", "debug", "info", "warn", "error"} {
+		cfg := &Config{LogLevel: lvl}
+		if err := (LogLevelValidator{}).Validate(cfg); err != nil {
+			t.Errorf("log level %q should be valid: %v", lvl, err)
+		}
+	}
+}
+
+func TestLogLevelValidator_EmptyAllowed(t *testing.T) {
+	cfg := &Config{LogLevel: ""}
+	if err := (LogLevelValidator{}).Validate(cfg); err != nil {
+		t.Errorf("empty log level should be allowed: %v", err)
+	}
+}
+
 func TestTimeoutValidator_Zero(t *testing.T) {
 	cfg := &Config{RequestTimeout: 0}
 	err := TimeoutValidator{}.Validate(cfg)

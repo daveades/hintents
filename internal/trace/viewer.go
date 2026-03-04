@@ -344,14 +344,6 @@ func (v *InteractiveViewer) displayCurrentState() {
 		}
 	}
 
-	// Show source location if available
-	if state.SourceFile != "" && state.SourceLine > 0 {
-		fmt.Printf("%s Source: %s:%d\n", visualizer.Symbol("file"), state.SourceFile, state.SourceLine)
-		if state.GitHubLink != "" {
-			fmt.Printf("%s GitHub: %s\n", visualizer.Symbol("link"), state.GitHubLink)
-		}
-	}
-
 	// Show memory/state summary
 	if len(state.HostState) > 0 {
 		fmt.Printf("Host State: %d entries\n", len(state.HostState))

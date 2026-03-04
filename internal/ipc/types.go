@@ -12,7 +12,7 @@ import (
 )
 
 // ToErstError converts an IPC Error from the Rust simulator into the unified ErstError type.
-// The original Code and Message strings are preserved in the Message field.
+// The original Code and Message strings are preserved in OrigErr.
 // Note: the Rust simulator currently emits plain message strings without structured codes,
 // so classification falls back to message-based heuristics via classifyByMessage.
 func (e *Error) ToErstError() *errors.ErstError {
